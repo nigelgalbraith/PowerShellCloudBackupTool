@@ -1,0 +1,49 @@
+{
+  "Providers": {
+    "Google": {
+      "Label": "Google Drive",
+      "Prefix": "GD",
+      "Destinations": ["D:\\Documents\\Google Drive"],
+      "Default": {
+        "Source": "",
+        "Dest": "C:\\GoogleDrive\\Backups",
+        "Zip": false,
+        "Mirror": false,
+        "Append": true,
+        "Name": "GoogleBackup",
+        "Freq": "Daily",
+        "Keep": 10
+      }
+    },
+    "Dropbox": {
+      "Label": "Dropbox",
+      "Prefix": "DB",
+      "Destinations": ["C:\\Users\\Lenovo\\Dropbox"],
+      "Default": {
+        "Source": "",
+        "Dest": "C:\\Dropbox\\Backups",
+        "Zip": false,
+        "Mirror": false,
+        "Append": true,
+        "Name": "DropboxBackup",
+        "Freq": "Weekly",
+        "Keep": 10
+      }
+    },
+    "Mega": {
+      "Label": "Mega NZ",
+      "Prefix": "MG",
+      "Destinations": ["D:\\Documents\\Mega"],
+      "Default": {
+        "Source": "",
+        "Dest": "C:\\Mega\\Backups",
+        "Zip": false,
+        "Mirror": false,
+        "Append": true,
+        "Name": "MegaBackup",
+        "Freq": "Monthly",
+        "Keep": 10
+      }
+    }
+  }
+}

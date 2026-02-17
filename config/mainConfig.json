@@ -1,0 +1,138 @@
+{
+  "Locations": {
+    "SettingsPath": "config/backupSettings.json",
+    "ProviderPath": "config/cloudProviders.json",
+    "LogPath": "logs"
+  },
+  "Logging": {
+    "LogsToKeep": 5
+  },
+  "Layout": {
+    "Form": {
+      "StartPosition": "CenterScreen"
+    },
+    "Fonts": {
+      "Default": "Microsoft Sans Serif, 8pt",
+      "Header": "Microsoft Sans Serif, 10pt, style=Bold",
+      "Log": "Consolas, 9pt"
+    },
+    "Labels": {
+      "X": 10,
+      "Width": 150
+    },
+    "TextBoxes": {
+      "X": 160,
+      "Width": 390,
+      "HeightSrc": 50,
+      "HeightDest": 20
+    },
+    "BrowseButtons": {
+      "X": 560,
+      "Width": 80,
+      "Height": 20
+    },
+    "ComboBoxes": {
+      "Width": 100
+    },
+    "NumericInputs": {
+      "Width": 100
+    },
+    "GroupBoxes": {
+      "Width": 320,
+      "Height": 45
+    },
+    "Headers": {
+      "Width": 300,
+      "Height": 25
+    },
+    "ExplainLabels": {
+      "Width": 650,
+      "Height": 60
+    },
+    "TabControl": {
+      "X": 10,
+      "Y": 10,
+      "Height": 540
+    },
+    "Control": {
+      "Height": 30
+    },
+    "ProgressBar": {
+      "Height": 20
+    },
+    "LogBox": {
+      "Height": 280,
+      "Y": 690
+    },
+    "Buttons": {
+      "Height": 30,
+      "Cancel": {
+        "Width": 120
+      },
+      "Backup": {
+        "Width": 150
+      },
+      "Shutdown": {
+        "Width": 200
+      }
+    },
+    "Offsets": {
+      "InnerRadioY": 15,
+      "LabelX": 160
+    },
+    "Colors": {
+      "ExplainText": "DarkBlue",
+      "ModeExplainText": "DarkGreen",
+      "LogBoxBack": "Black",
+      "LogBoxFore": "Lime"
+    },
+    "Spacing": {
+      "XSmall": 15,
+      "XMed":20,
+      "XBig": 25, 
+      "YBig": 30,
+      "YSmall": 20,
+      "X":15,
+      "Y":30
+    },
+    "Margins": {
+      "Left": 20,
+      "Right": 20
+    }
+  },
+  "ZipSettings": {
+    "Frequencies": ["Daily", "Weekly", "Monthly"],
+    "KeepCount": 2
+  },
+  "Robocopy": {
+    "Retries": 3,
+    "Wait": 5,
+    "Threads": 8,
+    "PostBackupDelay": 3,
+    "SyncCheckInterval": 10
+  },
+  "Tree": {
+    "Form": {
+      "Width": 600,
+      "Height": 500
+    },
+    "TreeView": {
+      "X": 10,
+      "Y": 10,
+      "Width": 560,
+      "Height": 410
+    },
+    "Buttons": {
+      "Width": 75,
+      "Height": 30,
+      "OK": {
+        "X": 390,
+        "Y": 430
+      },
+      "Cancel": {
+        "X": 480,
+        "Y": 430
+      }
+    }
+  }
+}
