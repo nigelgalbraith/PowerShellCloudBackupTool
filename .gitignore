@@ -1,0 +1,20 @@
+# Logs
+logs/
+*.log
+
+# Local backup settings (machine specific)
+config/backupSettings.json
+
+# PowerShell build/temp files
+*.tmp
+*.bak
+
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# PowerShell history
+ConsoleHost_history.txt
