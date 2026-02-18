@@ -82,8 +82,9 @@ If **File Backup** is selected:
 
 - **Mirror**  
   Makes destination identical to source (uses Robocopy mirror behaviour).
-   ⚠️ Important: Mirror mode can permanently delete files from the destination if they no longer exist in the source.
-   While most cloud providers offer a recycle bin (often ~30 days), recovery is not guaranteed use this mode carefully.
+  
+ ⚠️ Important: Mirror mode can permanently delete files from the destination if they no longer exist in the source.
+ While most cloud providers offer a recycle bin (often ~30 days), recovery is not guaranteed use this mode carefully.
 
 ---
 
