@@ -1,61 +1,203 @@
 # PowerShell Cloud Backup Tool
 
-A Windows PowerShell GUI tool for running repeatable backups into cloud-sync folders (Google Drive / Dropbox / Mega).
+A Windows PowerShell GUI tool for running structured, repeatable backups into cloud-sync folders (Google Drive, Dropbox, Mega).
 
-It’s designed for practical daily use:
-- pick one or more source folders/files
-- choose a provider destination (restricted to approved destinations per provider)
-- run **File Backup** (Mirror/Append) or **Zip Backup**
-- keep a rolling set of zip snapshots
-- log everything to a timestamped log file and the GUI terminal
+This tool was built to make cloud backups predictable, modular, and configurable.
+
+Everything is driven by configuration files and small, focused modules.
 
 ---
 
-## What It Does
+## Overview
 
-Per provider tab, you can configure:
+The project is structured around:
 
-- **Source**: one or more paths (stored as multiple lines)
-- **Destination**: must match one of that provider’s allowed destinations (defined in JSON)
-- **Backup Type**
-  - **File** backup
-    - **Mirror**: sync to match source (uses Robocopy mirror behaviour)
-    - **Append**: add/update without deleting (copy only)
-  - **Zip** backup
-    - Frequency label (daily/weekly/monthly) + a name pattern
-    - Keep a set number of recent zip backups
-- Optional “Backup + Shutdown” workflow (when enabled in the UI)
+- `main.ps1` (entry point)
+- Modular `.psm1` files under `Modules/`
+- JSON configuration files under `config/`
+- Robocopy for file operations
+- Built-in zip compression
+- Structured logging
+
+Each component has a clear responsibility.
 
 ---
 
-## How It Works
+## Features
 
-- `main.ps1` loads configuration from `config/mainConfig.json`
-- Cloud providers and destination restrictions come from `config/cloudProviders.json`
-- User settings are stored in `config/backupSettings.json`
-- Core logic is in modular `.psm1` files under `Modules/`
-  - Config + settings load/save
-  - Job validation
-  - File copy operations (Robocopy)
-  - Zip creation + retention
-  - GUI construction (WinForms) and a multi-select TreeView source picker
+Per provider tab (Google / Dropbox / Mega), you can:
+
+- Select multiple source folders or files
+- Choose a restricted destination path (defined per provider)
+- Select backup type:
+  - **File Backup**
+    - **Append** – copy new/updated files only
+    - **Mirror** – make destination exactly match source (deletes removed files)
+  - **Zip Backup**
+    - Create timestamped archive
+    - Choose frequency label (Daily / Weekly / Monthly)
+    - Define how many archives to retain
+- Run:
+  - **Backup**
+  - **Backup + Shutdown** (waits for sync before powering off)
+
+---
+
+## Step-by-Step Usage
+
+### Step 1 — Launch
+
+Run:
+
+```powershell
+.\main.ps1
+```
+
+Or double-click:
+
+```
+BackupTool.bat
+```
+
+The GUI loads previous saved settings automatically.
+
+---
+
+### Step 2 — Configure Source and Destination
+
+- Use Browse buttons to select one or more source paths.
+- Each provider has its own tab.
+- Destination must match one of the allowed provider paths defined in `cloudProviders.json`.
+
+This prevents accidental backups to unintended locations.
+
+---
+
+### Step 3 — Choose File Backup Mode
+
+If **File Backup** is selected:
+
+- **Append**  
+  Adds new or changed files to destination without deleting anything.
+
+- **Mirror**  
+  Makes destination identical to source (uses Robocopy mirror behaviour).
+
+---
+
+### Step 4 — Choose Zip Backup Mode
+
+If **Zip Backup** is selected:
+
+- Compress source into timestamped archive
+- Choose frequency label
+- Define how many previous zip backups to retain
+
+Useful for versioned backups or historical snapshots.
+
+---
+
+### Step 5 — Run Backup or Shutdown
+
+- Click **Backup** to execute.
+- Click **Backup + Shutdown** to:
+  - Run backup
+  - Attempt to wait for cloud sync completion
+  - Shutdown system
+
+Note:
+Cloud sync detection depends on provider behaviour. In some cases, shutdown may occur before full sync completes. If unsure, run a normal backup first and verify sync manually.
+
+---
+
+### Step 6 — Review the Log
+
+After execution:
+
+- View real-time log in GUI terminal window
+- Logs are saved to:
+
+```
+<user-home>\logs\
+```
+
+Each run generates a timestamped log file.
+
+---
+
+## Architecture
+
+### Entry Point
+
+`main.ps1`
+
+Responsible for:
+
+- Loading configuration
+- Initialising GUI
+- Handling user actions
+- Dispatching to modules
+
+---
+
+### Modules
+
+#### BackupConfig.psm1
+- Loads `mainConfig.json`
+- Loads layout settings
+- Handles application-wide configuration
+
+#### BackupCore.psm1
+- Validates source/destination
+- Runs Robocopy operations
+- Creates zip archives
+- Applies retention rules
+- Detects cloud sync completion
+- Writes logs
+
+#### BackupUI.psm1
+- Builds GUI layout
+- Creates provider tabs
+- Handles button events
+
+#### FileSystemUI.psm1
+- Builds multi-select TreeView picker
+- Returns selected paths to main form
+
+---
+
+## Configuration Files
+
+Located in `config/`:
+
+- `mainConfig.json` – layout, UI defaults
+- `cloudProviders.json` – provider definitions and allowed destinations
+- `backupSettings.json` – user selections (saved between sessions)
+
+You can modify or extend providers without editing core script logic.
+
+---
+
+## Logging
+
+- Logs written per run
+- Timestamped filenames
+- Stored in user home directory
+- Printed to GUI terminal in real time
+- Retention controlled by config
 
 ---
 
 ## Requirements
 
 - Windows
-- PowerShell (Windows PowerShell 5.1 or PowerShell 7+)
-- Robocopy available (built into Windows)
-- Execution policy allowing local script execution (or use the provided launcher)
+- PowerShell (5.1 or 7+)
+- Robocopy (built into Windows)
 
 ---
 
-## Run
+## License
 
-### Option A: Double-click
-- `BackupTool.bat`
+MIT License.
 
-### Option B: PowerShell
-```powershell
-powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\main.ps1
+Anyone is free to use, modify, distribute, or improve this code.
