@@ -471,24 +471,45 @@ function Remove-ExistingZip {
 
 
 function New-ZipArchive {
-    <#
-    .SYNOPSIS
-    Creates a zip archive from a source directory using optimal compression.
+<#
+.SYNOPSIS
+Creates a zip archive from one or more source folders.
 
-    .DESCRIPTION
-    This function uses .NET's built-in `System.IO.Compression.ZipFile` class to create
-    a `.zip` file from the specified source directory. It applies optimal compression
-    and does not include the root folder in the archive. The resulting zip is saved to
-    the provided destination path.
-    #>
+.DESCRIPTION
+Supports multiple source paths provided as a newline-separated string.
+Each folder is copied into a temporary staging directory and then compressed
+into a single zip archive. This avoids the limitation of CreateFromDirectory(),
+which only supports one source directory.
+
+.PARAMETER source
+Newline-separated list of folders to include in the archive.
+
+.PARAMETER destination
+Full path of the zip file that will be created.
+
+.NOTES
+Temporary staging folders are created under $env:TEMP and removed after the
+archive is created.
+#>
 
     param (
-        [string]$source,        # Path to the folder to zip
-        [string]$destination    # Full path where the zip archive should be created
+        [string]$source,
+        [string]$destination
     )
 
-    # Create the zip archive using optimal compression
-    [System.IO.Compression.ZipFile]::CreateFromDirectory($source, $destination, 'Optimal', $false)
+    $paths = $source -split "`r`n" | Where-Object { $_.Trim() -ne "" }
+
+    $tempDir = Join-Path $env:TEMP ("backup_" + [guid]::NewGuid())
+    New-Item -ItemType Directory -Path $tempDir | Out-Null
+
+    foreach ($path in $paths) {
+        $name = Split-Path $path -Leaf
+        Copy-Item $path -Destination (Join-Path $tempDir $name) -Recurse -Force
+    }
+
+    [System.IO.Compression.ZipFile]::CreateFromDirectory($tempDir, $destination, 'Optimal', $false)
+
+    Remove-Item $tempDir -Recurse -Force
 }
 
 
