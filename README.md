@@ -113,7 +113,43 @@ Cloud sync detection depends on provider behaviour. In some cases, shutdown may 
 
 ---
 
-### Step 6 — Review the Log
+### Step 6 — Schedule Automatic Backups
+
+The tool can create a **Windows Scheduled Task** directly from the GUI.
+
+This allows backups to run automatically without opening the application.
+
+#### Configure a Scheduled Backup
+
+1. Select the provider tab (Google / Dropbox / Mega).
+2. Configure the backup normally:
+
+   * Source paths
+   * Destination
+   * Backup type (File or Zip)
+3. In the **Scheduled Backup** section:
+
+   * Choose a **frequency**:
+
+     * Daily
+     * Weekly
+     * Monthly
+   * Choose the **time** the backup should run.
+4. Click **Schedule Backup**.
+
+The tool will create a Windows scheduled task that runs the backup automatically at the chosen time.
+
+#### Updating a Schedule
+
+If a schedule already exists, clicking **Schedule Backup** again will update the task with the new settings.
+
+#### Removing a Schedule
+
+Scheduled tasks can be removed directly from **Windows Task Scheduler** if automatic backups are no longer needed.
+
+---
+
+### Step 7 — Review the Log
 
 After execution:
 
