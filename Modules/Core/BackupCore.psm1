@@ -3,13 +3,6 @@
 Core backup operations and utilities
 #>
 
-# CONSTANTS
-# ======== LOGGING CONSTANTS ========
-$LOGFOLDER     = "$PSScriptRoot\..\..\logs"
-$LOGS_TO_KEEP  = 10
-$timestamp     = Get-Date -Format "yyyyMMdd_HHmmss"
-$LOG_FILE_PATH   = Join-Path $LOGFOLDER "backup_$timestamp.log"
-
 # DEPENDENCIES
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
@@ -143,9 +136,9 @@ function Get-ValidBackupJobs {
 
         # Ensure destination is among the provider's approved destinations
         $provider = $cloud_providers.Providers[$job.Key]
-        $matches = $provider.Destinations | Where-Object { $_ -eq $job.Dest }
+        $matchingDestinations = $provider.Destinations | Where-Object { $_ -eq $job.Dest }
 
-        if (-not $matches) {
+        if (-not $matchingDestinations) {
             $expected = $provider.Destinations -join ", "
             $errors += "Job '$($job.Key)': Destination must include one of: $expected"
             continue
@@ -238,12 +231,11 @@ function Invoke-FileCopyOperation {
         "/W:$wait",                  # Wait time
         "/MT:$threads",              # Multithreading
         "/TEE",                      # Output to console and log
-        "/NDL",                      # Suppress directory list
-        "/NFL"                       # Suppress file list
+        "/NDL"                       # Suppress directory list
     )
 
     # --- Mode-specific arguments ---
-    $modeArgs = if ($mode -eq "Mirror") { "/MIR" } else { "/E /XX" }
+    $modeArgs = if ($mode -eq "Mirror") { @("/MIR") } else { @("/E", "/XX") }
 
     # --- Split input source into array ---
     $sourcePaths = $source -split "`r`n" | Where-Object { $_ -ne '' -and $_.Trim() -ne '' }
@@ -342,42 +334,87 @@ function Invoke-ZipOperation {
 }
 
 function Start-ProcessWithOutput {
-    <#
-    .SYNOPSIS
-    Starts a background process, logs output to the GUI, and updates a progress bar.
+<#
+.SYNOPSIS
+Runs an external process and streams output to the log window.
 
-    .DESCRIPTION
-    This function launches a background process using the specified StartInfo configuration.
-    It reads the process's standard output line-by-line, logs each line to a GUI text box,
-    and provides visual feedback by incrementally updating a progress bar. It returns the 
-    completed process object after execution finishes.
-    #>
+.DESCRIPTION
+This function starts a process (such as robocopy), captures its standard
+output and error streams, and writes them to the GUI log window.
+
+Percentage-only progress lines produced by robocopy (such as "0%" or "45%")
+are ignored because they are often misleading and create unnecessary log spam.
+Instead, the log focuses on meaningful output such as file names and operation
+status messages.
+
+The function waits for the process to complete before returning.
+
+.PARAMETER processStartInfo
+Configured ProcessStartInfo object used to launch the process.
+
+.PARAMETER logBox
+The GUI text box used for displaying log output.
+
+.PARAMETER progressBar
+Optional progress bar control used to display process activity.
+
+.OUTPUTS
+System.Diagnostics.Process
+#>
 
     param (
-        $processStartInfo,   # A fully configured System.Diagnostics.ProcessStartInfo object
-        $logBox,             # TextBox control to which output lines will be logged
-        $progressBar         # ProgressBar control to visually indicate task progress
+        $processStartInfo,
+        $logBox,
+        $progressBar
     )
 
-    # Create and configure a new Process instance
+    # Create and configure the process
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $processStartInfo
+    $process.StartInfo.RedirectStandardOutput = $true
+    $process.StartInfo.RedirectStandardError = $true
+    $process.StartInfo.UseShellExecute = $false
+    $process.StartInfo.CreateNoWindow = $true
 
-    # Start the external process
-    $null = $process.Start()
-
-    $count = 0
-
-    # Read output line-by-line and log it to the GUI
-    while (-not $process.StandardOutput.EndOfStream) {
-        $line = $process.StandardOutput.ReadLine()                          # Read a line of output
-        Write-Log -logBox $logBox -message $line                            # Log the output line
-        Update-Progress -progressBar $progressBar -value (++$count % 100)  # Animate progress bar
+    # Set progress bar to marquee mode while process runs
+    if ($progressBar) {
+        $progressBar.Style = 'Marquee'
+        $progressBar.MarqueeAnimationSpeed = 30
+        [System.Windows.Forms.Application]::DoEvents()
     }
 
-    # Wait for process to exit and finalize progress bar
+    # Start the process
+    $null = $process.Start()
+
+    # Read standard output line by line
+    while (-not $process.StandardOutput.EndOfStream) {
+        $line = $process.StandardOutput.ReadLine()
+
+        # Skip percentage-only lines such as "0%" or "45%"
+        if ($line -match '^\s*\d{1,3}%\s*$') {
+            continue
+        }
+
+        # Write remaining output to the log
+        Write-Log -logBox $logBox -message $line
+    }
+
+    # Read standard error output
+    while (-not $process.StandardError.EndOfStream) {
+        $errLine = $process.StandardError.ReadLine()
+        if (-not [string]::IsNullOrWhiteSpace($errLine)) {
+            Write-Log -logBox $logBox -message $errLine -Error
+        }
+    }
+
+    # Wait for process completion
     $process.WaitForExit()
-    Update-Progress -progressBar $progressBar -value 100
+
+    # Set progress bar to complete
+    if ($progressBar) {
+        $progressBar.Style = 'Continuous'
+        Update-Progress -progressBar $progressBar -value 100
+    }
 
     return $process
 }

@@ -75,7 +75,7 @@ function Show-MultiFolderFilePicker {
     $form.Controls.Add($btnCancel)
 
     # Lazy-load subfolders/files
-    function Load-TreeChildren {
+    function Add-TreeChildren {
         param($node)
         $path = $node.Tag
         try {
@@ -111,13 +111,13 @@ function Show-MultiFolderFilePicker {
         param($s, $e)
         $node = $e.Node
         if ($node.Nodes.Count -eq 1 -and $node.Nodes[0].Text -eq 'Loading...') {
-            Load-TreeChildren $node
+            Add-TreeChildren $node
         }
     })
 
     # Check/uncheck all children when a parent node is checked
     $treeView.add_AfterCheck({
-        param($sender, $e)
+        param($controlsender, $e)
         $node = $e.Node
         # Only process if the check state was changed by the user
         if ($e.Action -ne [System.Windows.Forms.TreeViewAction]::Unknown) {
@@ -154,7 +154,7 @@ function Show-MultiFolderFilePicker {
                 # For directories, only include if parent isn't checked (to avoid duplicates)
                 $parentChecked = $false
                 $parent = $node.Parent
-                while ($parent -ne $null) {
+                while ($null -ne $parent) {
                     if ($parent.Checked) {
                         $parentChecked = $true
                         break
@@ -187,9 +187,9 @@ function Show-MultiFolderFilePicker {
             if (-not $node.Tag) { continue }
 
             # Check if any target path starts with this node
-            $matches = $targets | Where-Object { $_ -like "$($node.Tag)*" }
+            $targetMatches = $targets | Where-Object { $_ -like "$($node.Tag)*" }
 
-            if ($matches.Count -eq 0) {
+            if ($targetMatches.Count -eq 0) {
                 continue  # No need to go deeper
             }
 
@@ -198,7 +198,7 @@ function Show-MultiFolderFilePicker {
                 $node.Checked = $true
                 # Expand parent nodes to make this visible
                 $parent = $node.Parent
-                while ($parent -ne $null) {
+                while ($null -ne $parent) {
                     $parent.Expand()
                     $parent = $parent.Parent
                 }
@@ -206,7 +206,7 @@ function Show-MultiFolderFilePicker {
 
             # Load children if this might contain a match
             if ($node.Nodes.Count -eq 1 -and $node.Nodes[0].Text -eq 'Loading...') {
-                Load-TreeChildren $node
+                Add-TreeChildren $node
             }
 
             # Recurse into children

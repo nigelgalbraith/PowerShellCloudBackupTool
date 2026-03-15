@@ -61,8 +61,7 @@
       "Height": 20
     },
     "LogBox": {
-      "Height": 280,
-      "Y": 690
+      "Height": 260
     },
     "Buttons": {
       "Height": 30,
@@ -74,6 +73,39 @@
       },
       "Shutdown": {
         "Width": 200
+      }
+    },
+    "Schedule": {
+      "Label": {
+        "X": 20,
+        "Y": 590,
+        "Width": 140,
+        "Height": 20
+      },
+      "FrequencyComboBox": {
+        "X": 20,
+        "Y": 615,
+        "Width": 120,
+        "Height": 25
+      },
+      "TimePicker": {
+        "X": 150,
+        "Y": 615,
+        "Width": 100,
+        "Height": 25
+      },
+      "Buttons": {
+        "Height": 30,
+        "Schedule": {
+          "X": 270,
+          "Y": 612,
+          "Width": 130
+        },
+        "Unschedule": {
+          "X": 410,
+          "Y": 612,
+          "Width": 140
+        }
       }
     },
     "Offsets": {
@@ -88,12 +120,12 @@
     },
     "Spacing": {
       "XSmall": 15,
-      "XMed":20,
-      "XBig": 25, 
-      "YBig": 30,
-      "YSmall": 20,
-      "X":15,
-      "Y":30
+      "XMed": 20,
+      "XBig": 25,
+      "YBig": 25,
+      "YSmall": 15,
+      "X": 15,
+      "Y": 30
     },
     "Margins": {
       "Left": 20,
@@ -109,7 +141,8 @@
     "Wait": 5,
     "Threads": 8,
     "PostBackupDelay": 3,
-    "SyncCheckInterval": 10
+    "SyncCheckInterval": 10,
+    "SyncWaitSeconds": 10
   },
   "Tree": {
     "Form": {

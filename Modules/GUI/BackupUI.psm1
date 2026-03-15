@@ -16,32 +16,26 @@ function New-MainForm {
     It sets the window title, dimensions, starting position, and font based on provided parameters.
     The resulting form object is returned for use in constructing the rest of the GUI.
     #>
-
     param (
         [int]$formWidth,             # Width of the main form (in pixels)
         [int]$formHeight,            # Height of the main form (in pixels)
         [string]$startPosition,      # Form start position (e.g., 'CenterScreen', 'Manual')
         [string]$defaultFont         # Font to use throughout the form (e.g., 'Microsoft Sans Serif, 8pt')
     )
-
     # Create a new instance of a Windows Form
     $form = New-Object Windows.Forms.Form
-
     # Set the form's title text
     $form.Text = "Cloud Backup Tool"
-
     # Set the form's width and height
-    $form.Size = New-Object Drawing.Size($formWidth, $formHeight)
-
+    $form.ClientSize = New-Object System.Drawing.Size($formWidth, $formHeight)
     # Define where the form appears on screen when launched
     $form.StartPosition = $startPosition
-
     # Set the default font for all controls on the form
     $form.Font = $defaultFont
-
     # Return the form object for further customization or display
     return $form
 }
+
 
 function New-ProviderTabs {
     <#
@@ -55,7 +49,6 @@ function New-ProviderTabs {
 
     A shared control map reference is updated with all control references for later access (e.g., Save/Load).
     #>
-
     param (
         $providers,                    # Hashtable of cloud provider definitions
         $settings,                     # User backup settings keyed by provider name
@@ -66,33 +59,27 @@ function New-ProviderTabs {
         [int]$tabY,                    # Y-position of the tab control on the form
         $providerLayout                # Layout hashtable passed to Add-ProviderControls
     )
-
     # Create the main tab control container
     $tabControl = New-Object Windows.Forms.TabControl
     $tabControl.Size = New-Object Drawing.Size($tabWidth, $tabHeight)
     $tabControl.Location = New-Object Drawing.Point($tabX, $tabY)
-
     # Loop through each provider and create a tab
     foreach ($entry in $providers.Providers.GetEnumerator()) {
         $tab = New-Object Windows.Forms.TabPage
         $tab.Text = $entry.Value.Label  # Use label (e.g., "Dropbox", "Google Drive")
-
         # Populate controls on the tab using provider-specific logic
         $controls = Add-ProviderControls `
             -tab $tab `
             -prefix $entry.Value.Prefix `
             -settings $settings.$($entry.Key) `
             -layout $providerLayout
-
         # Add the tab to the main control
         $tabControl.TabPages.Add($tab)
-
         # Store created control references into shared map for later access
         foreach ($key in $controls.Keys) {
             $controlMap.Value[$key] = $controls[$key]
         }
     }
-
     return $tabControl
 }
 
@@ -110,17 +97,14 @@ function Add-ProviderControls {
     It returns a hashtable of all created control references, indexed by standardized control names for
     later access by other parts of the application (such as Save/Load logic or backup execution).
     #>
-
     param (
         $tab,                          # The tab page to populate with controls
         [string]$prefix,               # Provider prefix (used to name controls)
         $settings,                     # Default or loaded user settings for this provider
         [hashtable]$layout             # Layout definitions for spacing and control sizes
     )
-
     $controls = @{ }
-    $y = $layout.YSmallSpacing 
-
+    $y = $layout.YSmallSpacing
     # ---- Header Label ----
     $lblHeader = New-Object Windows.Forms.Label
     $lblHeader.Text = $tab.Text
@@ -129,7 +113,6 @@ function Add-ProviderControls {
     $lblHeader.Size = New-Object Drawing.Size($layout.HeaderWidth, $layout.HeaderHeight)
     $tab.Controls.Add($lblHeader)
     $y += $layout.HeaderHeight
-
     # ---- Source and Destination Paths ----
     foreach ($type in @("Source", "Dest")) {
         $height = if ($type -eq "Source") { $layout.TextBoxHeightSrc } else { $layout.TextBoxHeightDest }
@@ -158,33 +141,28 @@ function Add-ProviderControls {
             -TreeCancelX $layout.TreeCancelX `
             -TreeCancelY $layout.TreeCancelY `
             -TreeButtonWidth $layout.TreeButtonWidth `
-            -TreeButtonHeight $layout.TreeButtonHeight 
-
+            -TreeButtonHeight $layout.TreeButtonHeight
         $tab.Controls.AddRange(@($row.Label, $row.TextBox, $row.Button))
         $controls["Txt${prefix}${type}"] = $row.TextBox
-        $y += $height + $layout.YSmallSpacing 
+        $y += $height + $layout.YSmallSpacing
     }
-
     # ---- Backup Type Group (Zip/File) ----
     $grpType = New-Object Windows.Forms.GroupBox
     $grpType.Text = "Backup Type"
     $grpType.Location = New-Object Drawing.Point($layout.XLeftMargin, $y)
     $grpType.Size = New-Object Drawing.Size($layout.GroupBoxWidth, $layout.GroupBoxHeight)
     $tab.Controls.Add($grpType)
-
     $rdoFile = New-Object Windows.Forms.RadioButton
     $rdoFile.Text = "File Backup"
     $rdoFile.Location = New-Object Drawing.Point($layout.XLeftMargin, $layout.InnerRadioY)
     $grpType.Controls.Add($rdoFile)
     $controls["Rdo${prefix}File"] = $rdoFile
-
     $rdoZip = New-Object Windows.Forms.RadioButton
     $rdoZip.Text = "Zip Backup"
     $rdoZip.Location = New-Object Drawing.Point($layout.XLabelOffset, $layout.InnerRadioY)
     $grpType.Controls.Add($rdoZip)
     $controls["Rdo${prefix}Zip"] = $rdoZip
-    $y += $layout.GroupBoxHeight + $layout.YSmallSpacing 
-
+    $y += $layout.GroupBoxHeight + $layout.YSmallSpacing
     # ---- Zip/File Explanation Label ----
     $lblExplain = New-Object Windows.Forms.Label
     $lblExplain.Text = ""
@@ -194,8 +172,7 @@ function Add-ProviderControls {
     $lblExplain.ForeColor = $layout.ExplainTextColor
     $tab.Controls.Add($lblExplain)
     $controls["Lbl${prefix}Explain"] = $lblExplain
-    $y += $layout.ExplainLabelHeight + $layout.YSmallSpacing 
-
+    $y += $layout.ExplainLabelHeight + $layout.YSmallSpacing
     # ---- File Mode Group (Mirror/Append) ----
     $grpMode = New-Object Windows.Forms.GroupBox
     $grpMode.Text = "File Mode"
@@ -203,23 +180,19 @@ function Add-ProviderControls {
     $grpMode.Size = New-Object Drawing.Size($layout.GroupBoxWidth, $layout.GroupBoxHeight)
     $tab.Controls.Add($grpMode)
     $controls["Grp${prefix}Mode"] = $grpMode
-
     $rdoMirror = New-Object Windows.Forms.RadioButton
     $rdoMirror.Text = "Mirror"
     $rdoMirror.Location = New-Object Drawing.Point($layout.XLeftMargin, $layout.InnerRadioY)
     $grpMode.Controls.Add($rdoMirror)
     $controls["Rdo${prefix}Mirror"] = $rdoMirror
-
     $rdoAppend = New-Object Windows.Forms.RadioButton
     $rdoAppend.Text = "Append"
     $rdoAppend.Location = New-Object Drawing.Point($layout.XLabelOffset, $layout.InnerRadioY)
     $grpMode.Controls.Add($rdoAppend)
     $controls["Rdo${prefix}Append"] = $rdoAppend
     $y += $layout.GroupBoxHeight + $layout.YSmallSpacing
-
     # Zip Start pint when visable
     $zipStartY = $y
-
     # ---- Mirror/Append Explanation Label ----
     $lblModeExplain = New-Object Windows.Forms.Label
     $lblModeExplain.Text = ""
@@ -229,15 +202,13 @@ function Add-ProviderControls {
     $lblModeExplain.ForeColor = $layout.ModeExplainTextColor
     $tab.Controls.Add($lblModeExplain)
     $controls["Lbl${prefix}ModeExplain"] = $lblModeExplain
-    $y += $layout.ExplainLabelHeight + $layout.YSmallSpacing 
-
+    $y += $layout.ExplainLabelHeight + $layout.YSmallSpacing
     # ---- Frequency Dropdown ----
     $lblFreq = New-Object Windows.Forms.Label
     $lblFreq.Text = "Frequency:"
     $y += $layout.YSmallSpacing
     $lblFreq.Location = New-Object Drawing.Point($layout.XLeftMargin, $y)
     $tab.Controls.Add($lblFreq)
-
     $cmbFreq = New-Object Windows.Forms.ComboBox
     $cmbFreq.Items.AddRange($layout.DefaultFrequencies)
     $cmbFreq.DropDownStyle = 'DropDownList'
@@ -246,42 +217,35 @@ function Add-ProviderControls {
     $cmbFreq.Size = New-Object Drawing.Size($layout.ComboBoxWidth, $layout.ControlHeight)
     $tab.Controls.Add($cmbFreq)
     $controls["Cmb${prefix}Freq"] = $cmbFreq
-    $y = $zipStartY 
-
+    $y = $zipStartY
     # ---- Zip Name ----
     $lblName = New-Object Windows.Forms.Label
     $lblName.Text = "Zip Backup Name:"
     $lblName.Location = New-Object Drawing.Point($layout.XLeftMargin, $y)
     $tab.Controls.Add($lblName)
-
     $txtName = New-Object Windows.Forms.TextBox
     $txtName.Text = $settings.Name
     $txtName.Location = New-Object Drawing.Point($layout.XLabelOffset, $y)
     $txtName.Size = New-Object Drawing.Size($layout.TextBoxWidth, $layout.ControlHeight)
     $tab.Controls.Add($txtName)
     $controls["Txt${prefix}ZipName"] = $txtName
-    $y += $layout.ControlHeight + $layout.YSmallSpacing   
-    
+    $y += $layout.ControlHeight + $layout.YSmallSpacing
     # ---- Zip Retention Count ----
     $lblKeep = New-Object Windows.Forms.Label
     $lblKeep.Text = "Zips to keep:"
     $lblKeep.Location = New-Object Drawing.Point($layout.XLeftMargin, $y)
     $tab.Controls.Add($lblKeep)
-
     $numKeep = New-Object Windows.Forms.NumericUpDown
     $numKeep.Value = if ($settings.Keep) { $settings.Keep } else { $layout.DefaultKeepCount }
     $numKeep.Location = New-Object Drawing.Point($layout.XLabelOffset, $y)
     $numKeep.Size = New-Object Drawing.Size($layout.NumericWidth, $layout.ControlHeight)
     $tab.Controls.Add($numKeep)
     $controls["Num${prefix}Keep"] = $numKeep
-    $y += $layout.ControlHeight + $layout.YSmallSpacing  
-
-
+    $y += $layout.ControlHeight + $layout.YSmallSpacing
     # ---- Configure Initial State and Behaviors ----
     $zipControls = @($lblFreq, $cmbFreq, $lblName, $txtName, $lblKeep, $numKeep)
     $rdoFile.Tag = @{ Label = $lblExplain; ZipControls = $zipControls; ModeGroup = $grpMode; ModeLabel = $lblModeExplain }
     $rdoZip.Tag = $rdoFile.Tag
-
     if ($settings.Zip) {
         $rdoZip.Checked = $true
         $grpMode.Visible = $false
@@ -292,7 +256,6 @@ function Add-ProviderControls {
         $grpMode.Visible = $true
         $lblExplain.Text = "File Backup:`nUses Robocopy to mirror or append files to the destination folder."
         $zipControls | ForEach-Object { $_.Visible = $false }
-
         if ($settings.Mirror) {
             $rdoMirror.Checked = $true
             $lblModeExplain.Text = "Mirror:`nOnly selected source folders are mirrored to the destination.
@@ -304,7 +267,6 @@ function Add-ProviderControls {
                                     `nFiles and folders outside the selected source are not affected."
         }
     }
-
     # ---- Event Handlers for Zip/File Selection ----
     $rdoFile.Add_CheckedChanged({
         if ($this.Checked) {
@@ -314,30 +276,25 @@ function Add-ProviderControls {
             $this.Tag.ZipControls | ForEach-Object { $_.Visible = $false }
         }
     })
-
     $rdoZip.Add_CheckedChanged({
         if ($this.Checked) {
             $zipName = $this.Tag.ZipControls | Where-Object { $_ -is [System.Windows.Forms.TextBox] } | Select-Object -First 1
             $freqBox = $this.Tag.ZipControls | Where-Object { $_ -is [System.Windows.Forms.ComboBox] } | Select-Object -First 1
             $keepBox = $this.Tag.ZipControls | Where-Object { $_ -is [System.Windows.Forms.NumericUpDown] } | Select-Object -First 1
-
             $name = if ($zipName) { $zipName.Text } else { "<name>" }
             $freq = if ($freqBox) { $freqBox.SelectedItem } else { "Daily" }
             $keep = if ($keepBox) { $keepBox.Value } else { $layout.DefaultKeepCount }
-
             $suffix = switch ($freq) {
                 "Daily"   { (Get-Date).DayOfWeek.ToString().Substring(0,3) }
                 "Weekly"  { (Get-Date).AddDays(-([int](Get-Date).DayOfWeek)).ToString("yyyy-MM-dd") }
                 "Monthly" { (Get-Date).ToString("MMM") }
             }
-
             $this.Tag.Label.Text = "Zip Backup:`nThis will overwrite the file '$name-$suffix.zip' in the destination folder.`nLatest $keep backup$(if ($keep -ne 1) {'s'} else {''}) will be kept."
             $this.Tag.ModeGroup.Visible = $false
             $this.Tag.ModeLabel.Visible = $false
             $this.Tag.ZipControls | ForEach-Object { $_.Visible = $true }
         }
     })
-
     # ---- File Mode Description Update ----
     $rdoMirror.Tag = $lblModeExplain
     $rdoMirror.Add_CheckedChanged({
@@ -347,7 +304,6 @@ function Add-ProviderControls {
                                     `nFolders not included in the source selection will remain untouched in the destination."
         }
     })
-
     $rdoAppend.Tag = $lblModeExplain
     $rdoAppend.Add_CheckedChanged({
         if ($this.Checked) {
@@ -355,7 +311,6 @@ function Add-ProviderControls {
                                     `nFiles and folders outside the selected source are not affected."
         }
     })
-
     return $controls
 }
 
@@ -367,27 +322,24 @@ function New-ProgressBar {
 
     .DESCRIPTION
     This function initializes a new Windows Forms progress bar at a specified location
-    with defined width and height. It is typically used to visually indicate progress 
+    with defined width and height. It is typically used to visually indicate progress
     during file copy or zip operations in the Cloud Backup Tool.
     #>
-
     param (
         [int]$x,       # X position of the progress bar
         [int]$y,       # Y position (usually beneath tab control)
         [int]$width,   # Width of the progress bar
         [int]$height   # Height of the progress bar
     )
-
     # ---- Create and configure the progress bar control ----
     $progressBar = New-Object Windows.Forms.ProgressBar
-
     $progressBar.Location = New-Object Drawing.Point($x, $y)
-    $progressBar.Size     = New-Object Drawing.Size($width, $height)
-
+    $progressBar.Size = New-Object Drawing.Size($width, $height)
     # Set progress range from 0 to 100%
     $progressBar.Minimum = 0
     $progressBar.Maximum = 100
-
+    $progressBar.Style = 'Continuous'
+    $progressBar.MarqueeAnimationSpeed = 30
     return $progressBar
 }
 
@@ -402,7 +354,6 @@ function New-LogBox {
     It supports vertical scrolling, custom colors, and fonts, and is read-only to prevent user edits.
     Intended for use in the GUI as a live log display during backup operations.
     #>
-
     param (
         [int]$x,                  # X position (usually aligned with tab control)
         [int]$y,                  # Y position of the log box
@@ -412,23 +363,18 @@ function New-LogBox {
         [string]$foreColor,       # Foreground/text color (e.g., 'White')
         [string]$font             # Font specification (e.g., 'Consolas, 9pt')
     )
-
     # ---- Create and configure the log output box ----
     $logBox = New-Object Windows.Forms.TextBox
-
-    $logBox.Multiline  = $true                  # Allow multiple lines
-    $logBox.ScrollBars = "Vertical"             # Add vertical scrollbar
-    $logBox.ReadOnly   = $true                  # Prevent user editing
-
+    $logBox.Multiline = $true                  # Allow multiple lines
+    $logBox.ScrollBars = "Vertical"            # Add vertical scrollbar
+    $logBox.ReadOnly = $true                   # Prevent user editing
     # ---- Apply appearance settings ----
-    $logBox.BackColor = $backColor              # Set background color
-    $logBox.ForeColor = $foreColor              # Set text color
-    $logBox.Font      = $font                   # Set font
-
+    $logBox.BackColor = $backColor             # Set background color
+    $logBox.ForeColor = $foreColor             # Set text color
+    $logBox.Font = $font                       # Set font
     # ---- Position and size ----
     $logBox.Location = New-Object Drawing.Point($x, $y)
-    $logBox.Size     = New-Object Drawing.Size($width, $height)
-
+    $logBox.Size = New-Object Drawing.Size($width, $height)
     return $logBox
 }
 
@@ -443,7 +389,6 @@ function New-Buttons {
     generates three Windows Forms buttons: Cancel, Backup, and Backup & Shutdown. These buttons
     are returned as a hashtable so event handlers can be assigned elsewhere in the application.
     #>
-
     param (
         [int]$formWidth,        # Total width of the main form (used to center the button group)
         [int]$buttonHeight,     # Height of each button
@@ -453,34 +398,25 @@ function New-Buttons {
         [int]$shutdownWidth,    # Width of the Backup & Shutdown button
         [int]$spacing           # Horizontal space between buttons
     )
-
     # ---- Calculate total width of all buttons plus spacing ----
     $totalWidth = $cancelWidth + $spacing + $backupWidth + $spacing + $shutdownWidth
-
     # ---- Center button group on the form ----
     $startX = [math]::Floor(($formWidth - $totalWidth) / 2)
-
     # ---- Create Cancel button ----
     $btnCancel = New-Object Windows.Forms.Button
     $btnCancel.Text = "Cancel"
     $btnCancel.Size = New-Object Drawing.Size($cancelWidth, $buttonHeight)
     $btnCancel.Location = New-Object Drawing.Point($startX, $startY)
-
     # ---- Create Backup button ----
     $btnBackup = New-Object Windows.Forms.Button
     $btnBackup.Text = "Backup"
     $btnBackup.Size = New-Object Drawing.Size($backupWidth, $buttonHeight)
     $btnBackup.Location = New-Object Drawing.Point(($startX + $cancelWidth + $spacing), $startY)
-
     # ---- Create Backup & Shutdown button ----
     $btnShutdown = New-Object Windows.Forms.Button
     $btnShutdown.Text = "Backup && Shutdown"
     $btnShutdown.Size = New-Object Drawing.Size($shutdownWidth, $buttonHeight)
-    $btnShutdown.Location = New-Object Drawing.Point(
-        ($startX + $cancelWidth + $spacing + $backupWidth + $spacing),
-        $startY
-    )
-
+    $btnShutdown.Location = New-Object Drawing.Point(($startX + $cancelWidth + $spacing + $backupWidth + $spacing), $startY)
     # ---- Return all buttons in a hashtable for easy referencing ----
     return @{
         Cancel   = $btnCancel
@@ -490,5 +426,77 @@ function New-Buttons {
 }
 
 
-Export-ModuleMember -Function New-MainForm, New-ProviderTabs, Add-ProviderControls, 
-    New-ProgressBar, New-LogBox, New-Buttons
+function New-ScheduleControls {
+    <#
+    .SYNOPSIS
+    Creates and returns the scheduled backup section controls.
+
+    .DESCRIPTION
+    This function creates the scheduled backup label, frequency dropdown,
+    time picker, and the Schedule/Unschedule buttons using layout values
+    supplied from the main configuration file.
+    #>
+    param (
+        [int]$labelX,
+        [int]$labelY,
+        [int]$labelWidth,
+        [int]$labelHeight,
+        [int]$comboX,
+        [int]$comboY,
+        [int]$comboWidth,
+        [int]$comboHeight,
+        [int]$timeX,
+        [int]$timeY,
+        [int]$timeWidth,
+        [int]$timeHeight,
+        [int]$scheduleButtonX,
+        [int]$scheduleButtonY,
+        [int]$scheduleButtonWidth,
+        [int]$scheduleButtonHeight,
+        [int]$unscheduleButtonX,
+        [int]$unscheduleButtonY,
+        [int]$unscheduleButtonWidth,
+        [int]$unscheduleButtonHeight
+    )
+    # ---- Create section label ----
+    $lblSchedule = New-Object Windows.Forms.Label
+    $lblSchedule.Text = "Scheduled Backup"
+    $lblSchedule.Location = New-Object Drawing.Point($labelX, $labelY)
+    $lblSchedule.Size = New-Object Drawing.Size($labelWidth, $labelHeight)
+    # ---- Create frequency dropdown ----
+    $cmbScheduleFrequency = New-Object Windows.Forms.ComboBox
+    $cmbScheduleFrequency.Location = New-Object Drawing.Point($comboX, $comboY)
+    $cmbScheduleFrequency.Size = New-Object Drawing.Size($comboWidth, $comboHeight)
+    $cmbScheduleFrequency.DropDownStyle = 'DropDownList'
+    [void]$cmbScheduleFrequency.Items.Add("Daily")
+    [void]$cmbScheduleFrequency.Items.Add("Weekly")
+    [void]$cmbScheduleFrequency.Items.Add("Monthly")
+    $cmbScheduleFrequency.SelectedIndex = 0
+    # ---- Create time picker ----
+    $timeSchedule = New-Object Windows.Forms.DateTimePicker
+    $timeSchedule.Location = New-Object Drawing.Point($timeX, $timeY)
+    $timeSchedule.Size = New-Object Drawing.Size($timeWidth, $timeHeight)
+    $timeSchedule.Format = [Windows.Forms.DateTimePickerFormat]::Time
+    $timeSchedule.ShowUpDown = $true
+    # ---- Create schedule button ----
+    $btnScheduleBackup = New-Object Windows.Forms.Button
+    $btnScheduleBackup.Text = "Schedule Backup"
+    $btnScheduleBackup.Location = New-Object Drawing.Point($scheduleButtonX, $scheduleButtonY)
+    $btnScheduleBackup.Size = New-Object Drawing.Size($scheduleButtonWidth, $scheduleButtonHeight)
+    # ---- Create unschedule button ----
+    $btnUnscheduleBackup = New-Object Windows.Forms.Button
+    $btnUnscheduleBackup.Text = "Unschedule Backup"
+    $btnUnscheduleBackup.Location = New-Object Drawing.Point($unscheduleButtonX, $unscheduleButtonY)
+    $btnUnscheduleBackup.Size = New-Object Drawing.Size($unscheduleButtonWidth, $unscheduleButtonHeight)
+    # ---- Return schedule controls ----
+    return @{
+        Label              = $lblSchedule
+        FrequencyComboBox  = $cmbScheduleFrequency
+        TimePicker         = $timeSchedule
+        ScheduleButton     = $btnScheduleBackup
+        UnscheduleButton   = $btnUnscheduleBackup
+    }
+}
+
+
+Export-ModuleMember -Function New-MainForm, New-ProviderTabs, Add-ProviderControls, New-ProgressBar, New-LogBox, New-Buttons, New-ScheduleControls
