@@ -14,7 +14,7 @@
     "Fonts": {
       "Default": "Microsoft Sans Serif, 8pt",
       "Header": "Microsoft Sans Serif, 10pt, style=Bold",
-      "Log": "Consolas, 9pt"
+      "Log": "Consolas, 8pt"
     },
     "Labels": {
       "X": 10,
@@ -39,32 +39,32 @@
     },
     "GroupBoxes": {
       "Width": 320,
-      "Height": 45
+      "Height": 40
     },
     "Headers": {
       "Width": 300,
-      "Height": 25
+      "Height": 20
     },
     "ExplainLabels": {
       "Width": 650,
-      "Height": 60
+      "Height": 55
     },
     "TabControl": {
       "X": 10,
       "Y": 10,
-      "Height": 540
+      "Height": 535
     },
     "Control": {
-      "Height": 30
+      "Height": 25
     },
     "ProgressBar": {
       "Height": 20
     },
     "LogBox": {
-      "Height": 260
+      "Height": 250
     },
     "Buttons": {
-      "Height": 30,
+      "Height": 25,
       "Cancel": {
         "Width": 120
       },
@@ -76,26 +76,24 @@
       }
     },
     "Schedule": {
-      "Label": {
-        "X": 20,
-        "Y": 590,
-        "Width": 140,
+      "StatusLabel": {
+        "Width": 300,
         "Height": 20
       },
       "FrequencyComboBox": {
         "X": 20,
         "Y": 615,
         "Width": 120,
-        "Height": 25
+        "Height": 20
       },
       "TimePicker": {
         "X": 150,
         "Y": 615,
         "Width": 100,
-        "Height": 25
+        "Height": 20
       },
       "Buttons": {
-        "Height": 30,
+        "Height": 25,
         "Schedule": {
           "X": 270,
           "Y": 612,
@@ -122,8 +120,8 @@
       "XSmall": 15,
       "XMed": 20,
       "XBig": 25,
-      "YBig": 25,
-      "YSmall": 15,
+      "YBig": 20,
+      "YSmall": 10,
       "X": 15,
       "Y": 30
     },
@@ -157,7 +155,7 @@
     },
     "Buttons": {
       "Width": 75,
-      "Height": 30,
+      "Height": 25,
       "OK": {
         "X": 390,
         "Y": 430

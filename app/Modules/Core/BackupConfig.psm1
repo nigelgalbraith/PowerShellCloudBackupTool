@@ -1,5 +1,3 @@
-#CONSTANTS
-$SCHEDULE_BACKUP_BATFILE = "config/run_scheduled_backup.bat"
 
 <#
 .SYNOPSIS
@@ -116,10 +114,6 @@ function Register-BackupScheduledTask {
     <#
     .SYNOPSIS
     Creates or updates the scheduled backup task.
-
-    .DESCRIPTION
-    This function creates a Windows Scheduled Task that runs the scheduled
-    backup BAT launcher using the selected schedule frequency and time.
     #>
     param (
         [string]$scriptPath,
@@ -127,11 +121,10 @@ function Register-BackupScheduledTask {
         [datetime]$time
     )
     $taskName = Get-BackupTaskName
-    # Path to the BAT launcher
-    $batPath = Join-Path $scriptPath $SCHEDULE_BACKUP_BATFILE
+    $mainScriptPath = Join-Path $scriptPath "main.ps1"
     $trigger = New-BackupTaskTrigger -frequency $frequency -time $time
-    # Use cmd.exe to launch the BAT file
-    $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"$batPath`""
+    $arguments = "-ExecutionPolicy Bypass -NoProfile -File `"$mainScriptPath`" -AutoBackup"
+    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $arguments
     Register-ScheduledTask `
         -TaskName $taskName `
         -Action $action `
@@ -139,7 +132,6 @@ function Register-BackupScheduledTask {
         -Description "Runs the Cloud Backup Tool automatically." `
         -Force | Out-Null
 }
-
 
 function Unregister-BackupScheduledTaskSafe {
     <#
@@ -153,5 +145,47 @@ function Unregister-BackupScheduledTaskSafe {
     }
 }
 
+function Get-BackupScheduledTaskStatus {
+    <#
+    .SYNOPSIS
+    Returns the current scheduled backup task status.
+    #>
+    $taskName = Get-BackupTaskName
+    $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+    if (-not $task) {
+        return [PSCustomObject]@{
+            Exists    = $false
+            Enabled   = $false
+            StateText = "Scheduled Task: Disabled"
+        }
+    }
+    $enabled = $task.Settings.Enabled
+    $stateLabel = if ($enabled) { "Enabled" } else { "Disabled" }
+    $triggerText = ""
+    if ($task.Triggers.Count -gt 0) {
+        $trigger = $task.Triggers[0]
+        $freq = switch ($trigger.CimClass.CimClassName) {
+            "MSFT_TaskDailyTrigger"   { "Daily" }
+            "MSFT_TaskWeeklyTrigger"  { "Weekly" }
+            "MSFT_TaskMonthlyTrigger" { "Monthly" }
+            default                   { "Scheduled" }
+        }
+        $timeText = ""
+        if ($trigger.StartBoundary) {
+            try {
+                $start = [datetime]$trigger.StartBoundary
+                $timeText = $start.ToShortTimeString()
+            } catch {
+                $timeText = ""
+            }
+        }
+        $triggerText = if ($timeText) { " ($freq at $timeText)" } else { " ($freq)" }
+    }
+    return [PSCustomObject]@{
+        Exists    = $true
+        Enabled   = $enabled
+        StateText = "Scheduled Task: $stateLabel$triggerText"
+    }
+}
 
-Export-ModuleMember -Function Initialize-BackupSettings, Save-CurrentSettings, Get-BackupTaskName, New-BackupTaskTrigger, Register-BackupScheduledTask, Unregister-BackupScheduledTaskSafe
+Export-ModuleMember -Function Initialize-BackupSettings, Save-CurrentSettings, Get-BackupTaskName, New-BackupTaskTrigger, Register-BackupScheduledTask, Unregister-BackupScheduledTaskSafe, Get-BackupScheduledTaskStatus

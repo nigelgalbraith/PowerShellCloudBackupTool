@@ -10,7 +10,6 @@ function New-MainForm {
     <#
     .SYNOPSIS
     Creates and returns the main form for the Cloud Backup Tool GUI.
-
     .DESCRIPTION
     This function initializes the main Windows Forms GUI window for the Cloud Backup Tool.
     It sets the window title, dimensions, starting position, and font based on provided parameters.
@@ -437,10 +436,6 @@ function New-ScheduleControls {
     supplied from the main configuration file.
     #>
     param (
-        [int]$labelX,
-        [int]$labelY,
-        [int]$labelWidth,
-        [int]$labelHeight,
         [int]$comboX,
         [int]$comboY,
         [int]$comboWidth,
@@ -456,13 +451,12 @@ function New-ScheduleControls {
         [int]$unscheduleButtonX,
         [int]$unscheduleButtonY,
         [int]$unscheduleButtonWidth,
-        [int]$unscheduleButtonHeight
+        [int]$unscheduleButtonHeight,
+        [int]$statusLabelX,
+        [int]$statusLabelY,
+        [int]$statusLabelWidth,
+        [int]$statusLabelHeight
     )
-    # ---- Create section label ----
-    $lblSchedule = New-Object Windows.Forms.Label
-    $lblSchedule.Text = "Scheduled Backup"
-    $lblSchedule.Location = New-Object Drawing.Point($labelX, $labelY)
-    $lblSchedule.Size = New-Object Drawing.Size($labelWidth, $labelHeight)
     # ---- Create frequency dropdown ----
     $cmbScheduleFrequency = New-Object Windows.Forms.ComboBox
     $cmbScheduleFrequency.Location = New-Object Drawing.Point($comboX, $comboY)
@@ -488,13 +482,19 @@ function New-ScheduleControls {
     $btnUnscheduleBackup.Text = "Unschedule Backup"
     $btnUnscheduleBackup.Location = New-Object Drawing.Point($unscheduleButtonX, $unscheduleButtonY)
     $btnUnscheduleBackup.Size = New-Object Drawing.Size($unscheduleButtonWidth, $unscheduleButtonHeight)
+    # ---- Create status label ----
+    $lblScheduleStatus = New-Object Windows.Forms.Label
+    $lblScheduleStatus.Text = "Scheduled Task: Unknown"
+    $lblScheduleStatus.Location = New-Object Drawing.Point($statusLabelX, $statusLabelY)
+    $lblScheduleStatus.Size = New-Object Drawing.Size($statusLabelWidth, $statusLabelHeight)
+    $lblScheduleStatus.TextAlign = 'TopCenter'
     # ---- Return schedule controls ----
     return @{
-        Label              = $lblSchedule
         FrequencyComboBox  = $cmbScheduleFrequency
         TimePicker         = $timeSchedule
         ScheduleButton     = $btnScheduleBackup
         UnscheduleButton   = $btnUnscheduleBackup
+        StatusLabel        = $lblScheduleStatus
     }
 }
 

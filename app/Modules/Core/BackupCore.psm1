@@ -11,15 +11,12 @@ function Convert-ToHashtable {
     <#
     .SYNOPSIS
     Recursively converts a PSCustomObject into a native PowerShell hashtable.
-
     .DESCRIPTION
     This function is used to convert data returned from ConvertFrom-Json (which is typically a PSCustomObject)
     into a native PowerShell hashtable structure. It ensures that nested objects and arrays are also converted,
     allowing full hashtable features like .Keys and .GetEnumerator().
     #>
-
     param ([object]$InputObject)
-
     # Handle objects by building a hashtable of their properties
     if ($InputObject -is [System.Management.Automation.PSCustomObject]) {
         $hashtable = @{}
@@ -28,12 +25,10 @@ function Convert-ToHashtable {
         }
         return $hashtable
     }
-
     # Convert collections (e.g., arrays) recursively, excluding strings
     elseif ($InputObject -is [System.Collections.IEnumerable] -and -not ($InputObject -is [string])) {
         return $InputObject | ForEach-Object { Convert-ToHashtable $_ }
     }
-
     # Return primitive values (e.g., string, int, bool) as-is
     else {
         return $InputObject
@@ -45,25 +40,20 @@ function Import-JsonFile {
     <#
     .SYNOPSIS
     Loads a JSON file and converts it into a PowerShell object.
-
     .DESCRIPTION
     This function reads the content of a JSON file from the specified path and converts it 
     into a PowerShell object using ConvertFrom-Json. It is typically used in combination with 
     Convert-ToHashtable when hashtable behavior is needed for enumeration or key access.
     #>
-
     param (
         [string]$JsonPath
     )
-
     # Check that the specified JSON file exists
     if (-not (Test-Path $JsonPath)) {
         throw "JSON file not found at $JsonPath"
     }
-
     # Read the file content and convert the JSON into a PowerShell object
     $raw = Get-Content $JsonPath -Raw | ConvertFrom-Json
-
     return $raw
 }
 
@@ -72,43 +62,35 @@ function Get-ValidBackupJobs {
     <#
     .SYNOPSIS
     Validates backup jobs and returns both valid jobs and any errors encountered.
-
     .DESCRIPTION
     This function iterates through a collection of backup jobs and verifies that required fields
     (such as source and destination paths) are not empty, that the paths exist, and that the destination 
     is allowed according to the provider’s predefined list. It returns a structured object containing
     the list of valid jobs and any validation error messages for display or logging.
     #>
-
     param (
         $jobs,                # The list of backup jobs (each with keys like Source, Dest, Key)
         $cloud_providers,     # Cloud provider definitions (should contain .Providers[Key].Destinations)
         $logBox               # (Optional) GUI log box - not used here but available for future extension
     )
-
     $validJobs = @()  # Store jobs that pass all validation checks
     $errors = @()     # Collect error messages for reporting
-
     foreach ($job in $jobs) {
         # Check for missing provider key
         if (-not $job.Key) {
             $errors += "Job with no provider key skipped."
             continue
         }
-
         # Check if source or destination is blank
         if ([string]::IsNullOrWhiteSpace($job.Source) -or [string]::IsNullOrWhiteSpace($job.Dest)) {
             $errors += "Job '$($job.Key)': Source or destination is blank."
             continue
         }
-
         # Split multiple paths
         $sourcePaths = $job.Source -split "`r`n" | Where-Object { $_ -ne '' -and $_.Trim() -ne '' }
-
         # Track valid/invalid sources
         $validPaths = @()
         $invalidPaths = @()
-
         foreach ($path in $sourcePaths) {
             if (Test-Path $path) {
                 $validPaths += $path
@@ -116,38 +98,31 @@ function Get-ValidBackupJobs {
                 $invalidPaths += $path
             }
         }
-
         # If none of the paths exist, flag as an error
         if ($validPaths.Count -eq 0) {
             $errors += "Job '$($job.Key)': None of the source paths exist: $($job.Source)"
             continue
         }
-
         # (Optional) Warn if only some paths are bad
         if ($invalidPaths.Count -gt 0) {
             Write-Warning "Job '$($job.Key)': Some source paths do not exist: $($invalidPaths -join '; ')"
         }
-
         # Ensure destination path exists
         if (-not (Test-Path $job.Dest)) {
             $errors += "Job '$($job.Key)': Destination path does not exist: $($job.Dest)"
             continue
         }
-
         # Ensure destination is among the provider's approved destinations
         $provider = $cloud_providers.Providers[$job.Key]
         $matchingDestinations = $provider.Destinations | Where-Object { $_ -eq $job.Dest }
-
         if (-not $matchingDestinations) {
             $expected = $provider.Destinations -join ", "
             $errors += "Job '$($job.Key)': Destination must include one of: $expected"
             continue
         }
-
         # Job passed all checks — add to valid list
         $validJobs += $job
     }
-
     # Return both valid jobs and errors in a structured object
     return [PSCustomObject]@{
         ValidJobs = $validJobs
@@ -160,25 +135,20 @@ function New-BackupJobs {
     <#
     .SYNOPSIS
     Builds a list of backup job objects from GUI input fields.
-
     .DESCRIPTION
     This function loops through all defined cloud providers and creates a backup job object 
     for each provider where a source path is specified in the GUI. It gathers values from 
     related form controls (e.g., destination path, zip mode, frequency) and assembles them 
     into a structured object that represents a pending backup task.
     #>
-
     param (
         $gui,               # The GUI control hashtable containing user input fields
         $cloud_providers    # The loaded cloud provider definitions (including .Prefix for each)
     )
-
     $jobs = @()  # Initialize the job list
-
     foreach ($key in $cloud_providers.Providers.Keys) {
         $prefix = $cloud_providers.Providers[$key].Prefix
-        $source = $gui."Txt${prefix}Source".Text
-        
+        $source = $gui."Txt${prefix}Source".Text      
         # Only include jobs where a source path is provided
         if (-not [string]::IsNullOrWhiteSpace($source)) {
             $jobs += [PSCustomObject]@{
@@ -194,7 +164,6 @@ function New-BackupJobs {
             }
         }
     }
-
     return $jobs
 }
 
@@ -203,16 +172,13 @@ function Invoke-FileCopyOperation {
     <#
     .SYNOPSIS
     Executes a Robocopy file copy operation in either Mirror or Append mode, for multiple paths.
-
     .DESCRIPTION
     This function prepares and launches Robocopy processes to copy files/folders from source(s) 
     to the destination directory. It supports:
     - "Mirror" mode (exact replica with deletions)
     - "Append" mode (add/update only)
-
     Accepts semicolon-separated paths and handles each one independently.
     #>
-
     param (
         [string]$source,            # Semicolon-separated source paths
         [string]$dest,              # Destination directory for backup
@@ -223,7 +189,6 @@ function Invoke-FileCopyOperation {
         [int]$wait,                 # Wait between retries
         [int]$threads               # Robocopy multithread count
     )
-
     # --- Base robocopy arguments ---
     $baseArgs = @(
         "/Z",                         # Restartable mode
@@ -233,18 +198,13 @@ function Invoke-FileCopyOperation {
         "/TEE",                      # Output to console and log
         "/NDL"                       # Suppress directory list
     )
-
     # --- Mode-specific arguments ---
     $modeArgs = if ($mode -eq "Mirror") { @("/MIR") } else { @("/E", "/XX") }
-
     # --- Split input source into array ---
     $sourcePaths = $source -split "`r`n" | Where-Object { $_ -ne '' -and $_.Trim() -ne '' }
-
     foreach ($src in $sourcePaths) {
         if (-not (Test-Path $src)) { continue }
-
         $isDir = (Get-Item $src).PSIsContainer
-
         if ($isDir) {
             $destPath = Join-Path $dest (Split-Path $src -Leaf)
             $robocopySource = $src
@@ -259,20 +219,15 @@ function Invoke-FileCopyOperation {
             $robocopyDest   = $destPath
             $extraArgs = if ($mode -eq "Mirror") { @("/IF", "/XF", "`"$src`"") } else { @() }
         }
-
         $allArgs = @("`"$robocopySource`"", "`"$robocopyDest`"") + $baseArgs + $modeArgs + $extraArgs
-
         $psi = New-Object System.Diagnostics.ProcessStartInfo
         $psi.FileName = "robocopy.exe"
         $psi.Arguments = $allArgs -join " "
         $psi.RedirectStandardOutput = $true
         $psi.UseShellExecute = $false
         $psi.CreateNoWindow = $true
-
         Write-Log -logBox $logBox -message "Starting $mode operation from $robocopySource to $robocopyDest"
-
         $process = Start-ProcessWithOutput -processStartInfo $psi -logBox $logBox -progressBar $progressBar
-
         Write-Log -logBox $logBox -message "$mode operation completed (Exit code: $($process.ExitCode))"
     }
 }
@@ -281,7 +236,6 @@ function Invoke-ZipOperation {
     <#
     .SYNOPSIS
     Performs a zip backup operation with retention and error handling.
-
     .DESCRIPTION
     This function creates a compressed `.zip` archive of a specified source folder.
     It uses the frequency (e.g., Daily, Weekly) to generate a suffix for the zip filename,
@@ -289,7 +243,6 @@ function Invoke-ZipOperation {
     After completion, it enforces a retention policy by limiting the number of zip files
     retained in the destination directory. Errors are logged and shown to the user.
     #>
-
     param (
         [string]$source,       # The folder to back up
         [string]$dest,         # The folder where the zip should be saved
@@ -298,29 +251,21 @@ function Invoke-ZipOperation {
         [int]$keepCount,       # Number of zip files to retain
         $logBox                # GUI log textbox for status messages
     )
-
     try {
         # Generate suffix based on frequency (e.g., "2025-07-26-daily")
         $suffix = Get-ZipSuffix -frequency $frequency
-
         # Combine name and suffix to form full zip file path
         $zipPath = Join-Path $dest "$zipName-$suffix.zip"
-        
         # Log the beginning of the zip operation
         Write-Log -logBox $logBox -message "Starting zip operation for $source"
-
         # Remove an existing zip file with the same name if it exists
         Remove-ExistingZip -zipPath $zipPath -logBox $logBox
-
         # Create the new zip archive
         New-ZipArchive -source $source -destination $zipPath
-
         # Log success
         Write-Log -logBox $logBox -message "Successfully created zip: $zipPath"
-
         # Apply retention: delete older zip files beyond the keep count
         Set-BackupRetention -dest $dest -zipName $zipName -keepCount $keepCount -logBox $logBox
-
     } catch {
         # Log the error and show a message box
         Write-Log -logBox $logBox -message "ERROR during zip operation: $($_.Exception.Message)" -Error
@@ -337,37 +282,28 @@ function Start-ProcessWithOutput {
 <#
 .SYNOPSIS
 Runs an external process and streams output to the log window.
-
 .DESCRIPTION
 This function starts a process (such as robocopy), captures its standard
 output and error streams, and writes them to the GUI log window.
-
 Percentage-only progress lines produced by robocopy (such as "0%" or "45%")
 are ignored because they are often misleading and create unnecessary log spam.
 Instead, the log focuses on meaningful output such as file names and operation
 status messages.
-
 The function waits for the process to complete before returning.
-
 .PARAMETER processStartInfo
 Configured ProcessStartInfo object used to launch the process.
-
 .PARAMETER logBox
 The GUI text box used for displaying log output.
-
 .PARAMETER progressBar
 Optional progress bar control used to display process activity.
-
 .OUTPUTS
 System.Diagnostics.Process
 #>
-
     param (
         $processStartInfo,
         $logBox,
         $progressBar
     )
-
     # Create and configure the process
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $processStartInfo
@@ -375,30 +311,24 @@ System.Diagnostics.Process
     $process.StartInfo.RedirectStandardError = $true
     $process.StartInfo.UseShellExecute = $false
     $process.StartInfo.CreateNoWindow = $true
-
     # Set progress bar to marquee mode while process runs
     if ($progressBar) {
         $progressBar.Style = 'Marquee'
         $progressBar.MarqueeAnimationSpeed = 30
         [System.Windows.Forms.Application]::DoEvents()
     }
-
     # Start the process
     $null = $process.Start()
-
     # Read standard output line by line
     while (-not $process.StandardOutput.EndOfStream) {
         $line = $process.StandardOutput.ReadLine()
-
         # Skip percentage-only lines such as "0%" or "45%"
         if ($line -match '^\s*\d{1,3}%\s*$') {
             continue
         }
-
         # Write remaining output to the log
         Write-Log -logBox $logBox -message $line
     }
-
     # Read standard error output
     while (-not $process.StandardError.EndOfStream) {
         $errLine = $process.StandardError.ReadLine()
@@ -406,16 +336,13 @@ System.Diagnostics.Process
             Write-Log -logBox $logBox -message $errLine -Error
         }
     }
-
     # Wait for process completion
     $process.WaitForExit()
-
     # Set progress bar to complete
     if ($progressBar) {
         $progressBar.Style = 'Continuous'
         Update-Progress -progressBar $progressBar -value 100
     }
-
     return $process
 }
 
@@ -424,21 +351,17 @@ function Update-Progress {
     <#
     .SYNOPSIS
     Updates the GUI progress bar value and refreshes the UI.
-
     .DESCRIPTION
     This function sets the progress bar to a specified value, ensuring it does not exceed 100%.
     It also processes any pending Windows Forms events using `DoEvents()` to keep the GUI 
     responsive during long-running tasks such as file copying or compression.
     #>
-
     param (
         $progressBar,        # The Windows Forms ProgressBar control to update
         [int]$value          # The new value to assign to the progress bar
     )
-
     # Clamp the progress value to a maximum of 100 to prevent UI errors
     $progressBar.Value = [Math]::Min(100, $value)
-
     # Force the GUI to process pending events and stay responsive
     [System.Windows.Forms.Application]::DoEvents()
 }
@@ -462,7 +385,6 @@ function Get-ZipSuffix {
     param (
         [string]$frequency  # Frequency type: Daily, Weekly, or Monthly
     )
-
     switch ($frequency) {
         # Use 3-letter day of week for daily backups (e.g., Mon, Tue)
         "Daily"   { return (Get-Date).DayOfWeek.ToString().Substring(0,3) }
@@ -490,12 +412,10 @@ function Remove-ExistingZip {
     a new backup archive to prevent conflicts or duplicates. The deletion is also logged
     to the GUI via the provided log box.
     #>
-
     param (
         [string]$zipPath,   # Full path of the zip file to check and remove
         $logBox             # GUI text box for logging messages
     )
-
     # Check if the zip file already exists
     if (Test-Path $zipPath) {
         # Log the removal
@@ -511,41 +431,31 @@ function New-ZipArchive {
 <#
 .SYNOPSIS
 Creates a zip archive from one or more source folders.
-
 .DESCRIPTION
 Supports multiple source paths provided as a newline-separated string.
 Each folder is copied into a temporary staging directory and then compressed
 into a single zip archive. This avoids the limitation of CreateFromDirectory(),
 which only supports one source directory.
-
 .PARAMETER source
 Newline-separated list of folders to include in the archive.
-
 .PARAMETER destination
 Full path of the zip file that will be created.
-
 .NOTES
 Temporary staging folders are created under $env:TEMP and removed after the
 archive is created.
 #>
-
     param (
         [string]$source,
         [string]$destination
     )
-
     $paths = $source -split "`r`n" | Where-Object { $_.Trim() -ne "" }
-
     $tempDir = Join-Path $env:TEMP ("backup_" + [guid]::NewGuid())
     New-Item -ItemType Directory -Path $tempDir | Out-Null
-
     foreach ($path in $paths) {
         $name = Split-Path $path -Leaf
         Copy-Item $path -Destination (Join-Path $tempDir $name) -Recurse -Force
     }
-
     [System.IO.Compression.ZipFile]::CreateFromDirectory($tempDir, $destination, 'Optimal', $false)
-
     Remove-Item $tempDir -Recurse -Force
 }
 
@@ -603,18 +513,14 @@ function Wait-ForSyncCompletion {
 
     # Log the beginning of the sync monitoring process
     Write-Log -logBox $logBox -message "Monitoring sync status..."
-
     while ($true) {
         $allClear = $true
-
         foreach ($path in $paths) {
             # Skip this path if it doesn't exist
             if (-not (Test-Path $path)) { continue }
-
             # Find files recently modified within the defined wait window
             $recent = Get-ChildItem -Path $path -Recurse -Force -ErrorAction SilentlyContinue |
                       Where-Object { $_.LastWriteTime -gt (Get-Date).AddSeconds(-$waitSeconds) }
-
             # If recent files are found, log and pause before next check
             if ($recent) {
                 $allClear = $false
@@ -622,14 +528,11 @@ function Wait-ForSyncCompletion {
                 break
             }
         }
-
         # Exit loop if all paths show no recent activity
         if ($allClear) { break }
-
         # Wait before performing another sync check
         Start-Sleep -Seconds $intervalSeconds
     }
-
     # Log that sync appears complete
     Write-Log -logBox $logBox -message "All sync operations completed"
 }

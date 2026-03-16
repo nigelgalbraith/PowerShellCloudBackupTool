@@ -33,23 +33,19 @@ function Show-MultiFolderFilePicker {
         [int]$TreeButtonHeight,
         [string[]]$PreSelected = @()
     )
-
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
-
     # Create form
     $form = New-Object Windows.Forms.Form
     $form.Text = "Select Files and Folders"
     $form.Size = New-Object Drawing.Size($TreeFormWidth, $TreeFormHeight)
     $form.StartPosition = 'CenterScreen'
-
     # TreeView control
     $treeView = New-Object Windows.Forms.TreeView
     $treeView.CheckBoxes = $true
     $treeView.Location = New-Object Drawing.Point($TreeX, $TreeY)
     $treeView.Size = New-Object Drawing.Size($TreeWidth, $TreeHeight)
     $form.Controls.Add($treeView)
-
     # OK button
     $btnOK = New-Object Windows.Forms.Button
     $btnOK.Text = "OK"
@@ -61,7 +57,6 @@ function Show-MultiFolderFilePicker {
         $form.Close()
     })
     $form.Controls.Add($btnOK)
-
     # Cancel button
     $btnCancel = New-Object Windows.Forms.Button
     $btnCancel.Text = "Cancel"
@@ -96,8 +91,7 @@ function Show-MultiFolderFilePicker {
                 $file = New-Object Windows.Forms.TreeNode
                 $file.Text = $_.Name
                 $file.Tag = $_.FullName
-                $node.Nodes.Add($file)
-                
+                $node.Nodes.Add($file)  
                 # If parent is checked, check the file immediately
                 if ($node.Checked) {
                     $file.Checked = $true
@@ -105,7 +99,6 @@ function Show-MultiFolderFilePicker {
             }
         } catch {}
     }
-
     # Expand event to load children
     $treeView.add_BeforeExpand({
         param($s, $e)
@@ -126,15 +119,12 @@ function Show-MultiFolderFilePicker {
                 # Recursively check/uncheck all children
                 $stack = New-Object System.Collections.Stack
                 $stack.Push($node)
-                
                 while ($stack.Count -gt 0) {
                     $current = $stack.Pop()
-                    
                     # Only change nodes that aren't already in the correct state
                     if ($current.Checked -ne $node.Checked) {
                         $current.Checked = $node.Checked
                     }
-                    
                     # Push all children onto the stack
                     foreach ($child in $current.Nodes) {
                         $stack.Push($child)
@@ -160,13 +150,11 @@ function Show-MultiFolderFilePicker {
                         break
                     }
                     $parent = $parent.Parent
-                }
-                
+                }   
                 if (-not $parentChecked) {
                     $all += $node.Tag
                 }
-            }
-            
+            }  
             # Always recurse to check children
             if ($node.Nodes.Count -gt 0) {
                 $all += Get-CheckedPaths $node.Nodes
@@ -181,18 +169,14 @@ function Show-MultiFolderFilePicker {
             [System.Windows.Forms.TreeNodeCollection]$nodes,
             [string[]]$targets
         )
-
         foreach ($node in $nodes) {
             # Skip empty or irrelevant nodes
             if (-not $node.Tag) { continue }
-
             # Check if any target path starts with this node
             $targetMatches = $targets | Where-Object { $_ -like "$($node.Tag)*" }
-
             if ($targetMatches.Count -eq 0) {
                 continue  # No need to go deeper
             }
-
             # If this exact node matches a selected path, check it
             if ($targets -contains $node.Tag) {
                 $node.Checked = $true
@@ -203,19 +187,16 @@ function Show-MultiFolderFilePicker {
                     $parent = $parent.Parent
                 }
             }
-
             # Load children if this might contain a match
             if ($node.Nodes.Count -eq 1 -and $node.Nodes[0].Text -eq 'Loading...') {
                 Add-TreeChildren $node
             }
-
             # Recurse into children
             if ($node.Nodes.Count -gt 0) {
                 Set-CheckedPaths -nodes $node.Nodes -targets $targets
             }
         }
     }
-
     # Populate root drives
     [System.IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady } | ForEach-Object {
         $root = New-Object Windows.Forms.TreeNode
@@ -224,12 +205,10 @@ function Show-MultiFolderFilePicker {
         $root.Nodes.Add('Loading...') | Out-Null
         $treeView.Nodes.Add($root)
     }
-
     # Apply preselected paths
     if ($PreSelected.Count -gt 0) {
         Set-CheckedPaths -nodes $treeView.Nodes -targets $PreSelected
     }
-
     # Show dialog and return checked paths
     $result = $form.ShowDialog()
     if ($result -eq [System.Windows.Forms.DialogResult]::OK) {

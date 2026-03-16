@@ -23,6 +23,19 @@ Import-Module "$PSScriptRoot\modules\GUI\BackupUI.psm1" -Force -Verbose
 Import-Module "$PSScriptRoot\modules\GUI\FileSystemUI.psm1" -Force -Verbose
 
 
+function Resolve-AppPath {
+    param(
+        [string]$BasePath,
+        [string]$ChildPath
+    )
+
+    if ([System.IO.Path]::IsPathRooted($ChildPath)) {
+        return $ChildPath
+    }
+
+    return [System.IO.Path]::GetFullPath((Join-Path $BasePath $ChildPath))
+}
+
 function Write-Log {
     <#
     .SYNOPSIS
@@ -142,18 +155,21 @@ function Main {
         # LOAD CONFIGURATION AND RESOURCES
         # ------------------------------
         $config = Convert-ToHashtable (Import-JsonFile -JsonPath $CONFIG_PATH)
+        $appRoot = $PSScriptRoot
+        $settingsPath = Resolve-AppPath -BasePath $appRoot -ChildPath $config.Locations.SettingsPath
+        $providerPath = Resolve-AppPath -BasePath $appRoot -ChildPath $config.Locations.ProviderPath
+        $logFolder    = Resolve-AppPath -BasePath $appRoot -ChildPath $config.Locations.LogPath
+        $script:logFolder = $logFolder
+        $script:logsToKeep = $config.Logging.LogsToKeep
+        $cloud_providers = Convert-ToHashtable (Import-JsonFile -JsonPath $providerPath)
+        $settings = Initialize-BackupSettings -settingsPath $settingsPath -providers $cloud_providers
         # Logging variables
-        $script:logFolder = Join-Path $env:USERPROFILE $config.Locations.LogPath
         $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
         if ($AutoBackup) {
             $script:logFilePath = Join-Path $script:logFolder "backup_auto_$timestamp.log"
         } else {
             $script:logFilePath = Join-Path $script:logFolder "backup_$timestamp.log"
         }
-        $script:logsToKeep = $config.Logging.LogsToKeep
-        # Load cloud providers and current saved settings
-        $cloud_providers = Convert-ToHashtable (Import-JsonFile -JsonPath $config.Locations.ProviderPath)
-        $settings = Initialize-BackupSettings -settingsPath $config.Locations.SettingsPath -providers $cloud_providers
         # Robocopy engine settings
         $robocopy_settings = @{
             RobocopyRetries   = $config.Robocopy.Retries
@@ -257,11 +273,9 @@ function Main {
         $buttonBottom = $buttonY + $config.Layout.Buttons.Height
 
         # Schedule section vertical positions
-        $scheduleLabelY = $buttonBottom + $config.Layout.Spacing.YSmall
-        $scheduleRowY = $scheduleLabelY + $config.Layout.Schedule.Label.Height + $config.Layout.Spacing.YSmall
+        $scheduleRowY = $buttonBottom + $config.Layout.Spacing.YSmall
 
         # Schedule section widths
-        $scheduleLabelWidth = $config.Layout.Schedule.Label.Width
         $comboWidth = $config.Layout.Schedule.FrequencyComboBox.Width
         $comboHeight = $config.Layout.Schedule.FrequencyComboBox.Height
         $timeWidth = $config.Layout.Schedule.TimePicker.Width
@@ -283,40 +297,38 @@ function Main {
 
         $scheduleGroupX = [int](($formWidth - $scheduleGroupWidth) / 2)
 
-        # Centre the schedule label
-        $scheduleLabelX = [int](($formWidth - $scheduleLabelWidth) / 2)
+        # Status label layout
+        $statusLabelWidth = $config.Layout.Schedule.StatusLabel.Width
+        $statusLabelHeight = $config.Layout.Schedule.StatusLabel.Height
+        $statusLabelX = [int](($formWidth - $statusLabelWidth) / 2)
+        $statusLabelY = $scheduleRowY + $scheduleButtonHeight + $config.Layout.Spacing.YSmall
+
+        # Work out the bottom of the schedule controls section
+        $scheduleBottom = $statusLabelY + $statusLabelHeight
 
         # Schedule layout
         $schedule_layout = @{
-            labelX                 = $scheduleLabelX
-            labelY                 = $scheduleLabelY
-            labelWidth             = $scheduleLabelWidth
-            labelHeight            = $config.Layout.Schedule.Label.Height
-
-            comboX                 = $scheduleGroupX
-            comboY                 = $scheduleRowY
-            comboWidth             = $comboWidth
-            comboHeight            = $comboHeight
-
-            timeX                  = $scheduleGroupX + $comboWidth + $scheduleSpacing
-            timeY                  = $scheduleRowY
-            timeWidth              = $timeWidth
-            timeHeight             = $timeHeight
-
-            scheduleButtonX        = $scheduleGroupX + $comboWidth + $scheduleSpacing + $timeWidth + $scheduleSpacing
-            scheduleButtonY        = $scheduleRowY
-            scheduleButtonWidth    = $scheduleButtonWidth
-            scheduleButtonHeight   = $scheduleButtonHeight
-
-            unscheduleButtonX      = $scheduleGroupX + $comboWidth + $scheduleSpacing + $timeWidth + $scheduleSpacing + $scheduleButtonWidth + $scheduleSpacing
-            unscheduleButtonY      = $scheduleRowY
-            unscheduleButtonWidth  = $unscheduleButtonWidth
-            unscheduleButtonHeight = $scheduleButtonHeight
+            comboX                  = $scheduleGroupX
+            comboY                  = $scheduleRowY
+            comboWidth              = $comboWidth
+            comboHeight             = $comboHeight
+            timeX                   = $scheduleGroupX + $comboWidth + $scheduleSpacing
+            timeY                   = $scheduleRowY
+            timeWidth               = $timeWidth
+            timeHeight              = $timeHeight
+            scheduleButtonX         = $scheduleGroupX + $comboWidth + $scheduleSpacing + $timeWidth + $scheduleSpacing
+            scheduleButtonY         = $scheduleRowY
+            scheduleButtonWidth     = $scheduleButtonWidth
+            scheduleButtonHeight    = $scheduleButtonHeight
+            unscheduleButtonX       = $scheduleGroupX + $comboWidth + $scheduleSpacing + $timeWidth + $scheduleSpacing + $scheduleButtonWidth + $scheduleSpacing
+            unscheduleButtonY       = $scheduleRowY
+            unscheduleButtonWidth   = $unscheduleButtonWidth
+            unscheduleButtonHeight  = $scheduleButtonHeight
+            statusLabelX            = $statusLabelX
+            statusLabelY            = $statusLabelY
+            statusLabelWidth        = $statusLabelWidth
+            statusLabelHeight       = $statusLabelHeight
         }
-
-        # Work out the bottom of the schedule controls section
-        $scheduleBottom = $scheduleRowY + $scheduleButtonHeight
-
         # Progress bar layout
         $progressWidth = $formWidth - ($config.Layout.TabControl.X * 2)
         $progressY = $scheduleBottom + $config.Layout.Spacing.YSmall
@@ -343,7 +355,6 @@ function Main {
 
         # Calculate form height from the actual bottom-most control
         $formHeight = $logBoxY + $logBoxHeight + $config.Layout.Spacing.YBig 
-
         # Form-level layout
         $form_layout = @{
             formWidth     = $formWidth
@@ -369,11 +380,11 @@ function Main {
             $buttons.Cancel,
             $buttons.Backup,
             $buttons.Shutdown,
-            $scheduleControls.Label,
             $scheduleControls.FrequencyComboBox,
             $scheduleControls.TimePicker,
             $scheduleControls.ScheduleButton,
-            $scheduleControls.UnscheduleButton
+            $scheduleControls.UnscheduleButton,
+            $scheduleControls.StatusLabel
         ))
         # ------------------------------
         # CREATE GUI CONTEXT OBJECT
@@ -385,12 +396,15 @@ function Main {
             BtnCancel            = $buttons.Cancel
             BtnBackup            = $buttons.Backup
             BtnShutdown          = $buttons.Shutdown
-            LblSchedule          = $scheduleControls.Label
             CmbScheduleFrequency = $scheduleControls.FrequencyComboBox
             TimeSchedule         = $scheduleControls.TimePicker
             BtnScheduleBackup    = $scheduleControls.ScheduleButton
             BtnUnscheduleBackup  = $scheduleControls.UnscheduleButton
+            LblScheduleStatus    = $scheduleControls.StatusLabel
         }
+        # Set task status
+        $taskStatus = Get-BackupScheduledTaskStatus
+        $gui.LblScheduleStatus.Text = $taskStatus.StateText
         # Add all control references (e.g., TxtGDriveSource) to GUI
         foreach ($key in $controlMap.Keys) {
             $gui | Add-Member -MemberType NoteProperty -Name $key -Value $controlMap[$key]
@@ -402,7 +416,7 @@ function Main {
         $gui.BtnCancel.Add_Click({ $gui.Form.Close() })
         # Backup button
         $gui.BtnBackup.Add_Click({
-            Save-CurrentSettings -gui $gui -providers $cloud_providers -settingsPath $config.Locations.SettingsPath
+            Save-CurrentSettings -gui $gui -providers $cloud_providers -settingsPath $settingsPath
             $jobs = New-BackupJobs -gui $gui -cloud_providers $cloud_providers
             $result = Get-ValidBackupJobs -jobs $jobs -cloud_providers $cloud_providers -logBox $gui.LogBox
             $valid = $result.ValidJobs
@@ -417,7 +431,7 @@ function Main {
         })
         # Backup + Shutdown button
         $gui.BtnShutdown.Add_Click({
-            Save-CurrentSettings -gui $gui -providers $cloud_providers -settingsPath $config.Locations.SettingsPath
+            Save-CurrentSettings -gui $gui -providers $cloud_providers -settingsPath $settingsPath
             $jobs = New-BackupJobs -gui $gui -cloud_providers $cloud_providers
             $result = Get-ValidBackupJobs -jobs $jobs -cloud_providers $cloud_providers -logBox $gui.LogBox
             $valid = $result.ValidJobs
@@ -434,11 +448,13 @@ function Main {
         # Schedule Backup button
         $gui.BtnScheduleBackup.Add_Click({
             try {
-                Save-CurrentSettings -gui $gui -providers $cloud_providers -settingsPath $config.Locations.SettingsPath
+                Save-CurrentSettings -gui $gui -providers $cloud_providers -settingsPath $settingsPath
                 $frequency = $gui.CmbScheduleFrequency.SelectedItem.ToString()
                 $time = $gui.TimeSchedule.Value
                 Register-BackupScheduledTask -scriptPath $PSScriptRoot -frequency $frequency -time $time
                 Write-Log -logBox $gui.LogBox -message "Scheduled backup task created: $frequency at $($time.ToShortTimeString())"
+                $taskStatus = Get-BackupScheduledTaskStatus
+                $gui.LblScheduleStatus.Text = $taskStatus.StateText
                 [System.Windows.Forms.MessageBox]::Show("Scheduled backup created successfully.", "Scheduled Backup", 'OK', 'Information')
             } catch {
                 Write-Log -logBox $gui.LogBox -message "Failed to create scheduled backup: $($_.Exception.Message)" -Error
@@ -450,6 +466,8 @@ function Main {
             try {
                 Unregister-BackupScheduledTaskSafe
                 Write-Log -logBox $gui.LogBox -message "Scheduled backup task removed."
+                $taskStatus = Get-BackupScheduledTaskStatus
+                $gui.LblScheduleStatus.Text = $taskStatus.StateText
                 [System.Windows.Forms.MessageBox]::Show("Scheduled backup removed successfully.", "Scheduled Backup", 'OK', 'Information')
             } catch {
                 Write-Log -logBox $gui.LogBox -message "Failed to remove scheduled backup: $($_.Exception.Message)" -Error
