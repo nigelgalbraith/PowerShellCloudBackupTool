@@ -125,12 +125,23 @@ function Register-BackupScheduledTask {
     $trigger = New-BackupTaskTrigger -frequency $frequency -time $time
     $arguments = "-ExecutionPolicy Bypass -NoProfile -File `"$mainScriptPath`" -AutoBackup"
     $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $arguments
-    Register-ScheduledTask `
-        -TaskName $taskName `
-        -Action $action `
-        -Trigger $trigger `
-        -Description "Runs the Cloud Backup Tool automatically." `
-        -Force | Out-Null
+    $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable
+    try {
+        Register-ScheduledTask `
+            -TaskName $taskName `
+            -Action $action `
+            -Trigger $trigger `
+            -Settings $settings `
+            -Description "Runs the Cloud Backup Tool automatically." `
+            -Force `
+            -ErrorAction Stop | Out-Null
+        $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+        if (-not $task) {
+            throw "Task registration completed without a visible task."
+        }
+    } catch {
+        throw "Failed to register scheduled task '$taskName': $($_.Exception.Message)"
+    }
 }
 
 function Unregister-BackupScheduledTaskSafe {
